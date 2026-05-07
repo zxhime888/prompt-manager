@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>AI 提示词库管理器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+      color: #0f172a;
+    }
+
+    .app {
+      max-width: 900px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 2rem;
+      box-shadow: 0 20px 35px rgba(0, 0, 0, 0.05), 0 10px 20px rgba(0, 0, 0, 0.03);
+      padding: 2rem 2rem 2.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      border: 1px solid #f1f5f9;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    h1 i {
+      font-style: normal;
+      font-size: 2rem;
+      background: none;
+      -webkit-text-fill-color: #4f46e5;
+    }
+
+    .stats {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 0.4rem 1.2rem;
+      border-radius: 2rem;
+    }
+
+    /* 工具栏 */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 2;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 0.8rem 1.2rem 0.8rem 2.8rem;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 1.5rem;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .search-box input:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 1.2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+
+    .category-select {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .category-select select {
+      width: 100%;
+      padding: 0.8rem 1.2rem;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      border-radius: 1.5rem;
+      font-size: 0.95rem;
+      color: #1e293b;
+      appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .category-select select:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      border: none;
+      color: white;
+      font-weight: 500;
+      padding: 0.8rem 1.8rem;
+      border-radius: 1.5rem;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-primary:hover {
+      background: #4338ca;
+      box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+    }
+
+    /* 卡片网格 */
+    .prompts-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      max-height: 500px;
+      overflow-y: auto;
+      padding-right: 0.3rem;
+      min-height: 240px;
+    }
+
+    .prompts-grid::-webkit-scrollbar {
+      width: 5px;
+    }
+    .prompts-grid::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .prompts-grid::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+
+    .prompt-card {
+      background: #ffffff;
+      border: 1px solid #f1f5f9;
+      border-radius: 1.2rem;
+      padding: 1.2rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: all 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      background: #fafbff;
+    }
+
+    .prompt-card:hover {
+      border-color: #d9d9ff;
+      box-shadow: 0 10px 18px rgba(79, 70, 229, 0.08);
+      background: #ffffff;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .card-title {
+      font-weight: 650;
+      font-size: 1.1rem;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      word-break: break-word;
+    }
+
+    .badge {
+      background: #e0e7ff;
+      color: #3730a3;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.25rem 0.8rem;
+      border-radius: 2rem;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .prompt-content {
+      color: #334155;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      background: #ffffff;
+      padding: 0.7rem 1rem;
+      border-radius: 0.8rem;
+      border: 1px solid #edf2f7;
+      word-break: break-word;
+      white-space: pre-wrap;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.2rem;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.7rem;
+      padding: 0.45rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.15s;
+      background: #ffffff;
+    }
+
+    .btn-icon:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #1e293b;
+    }
+
+    .btn-copy {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: #4338ca;
+      font-weight: 500;
+    }
+
+    .btn-copy:hover {
+      background: #e0e7ff;
+      border-color: #a5b4fc;
+    }
+
+    .btn-delete {
+      color: #b91c1c;
+      border-color: #fee2e2;
+      background: #fff5f5;
+    }
+
+    .btn-delete:hover {
+      background: #fee2e2;
+      border-color: #fecaca;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      padding: 2.5rem;
+      font-size: 0.95rem;
+      background: #f9fafb;
+      border-radius: 1.5rem;
+      border: 1px dashed #cbd5e1;
+    }
+
+    /* 模态框 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.3);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      border-radius: 1.8rem;
+      padding: 1.8rem;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 30px 50px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .modal-content h2 {
+      font-weight: 600;
+      font-size: 1.4rem;
+      color: #0f172a;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      padding: 0.7rem 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      font-size: 0.9rem;
+      background: #fafbff;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.8rem;
+      margin-top: 0.3rem;
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 1.5rem;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    @media (max-width: 500px) {
+      .app {
+        padding: 1.5rem;
+      }
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>
+      <i>✨</i> 提示词库
+    </h1>
+    <div class="stats" id="statsDisplay">0 条提示词</div>
+  </div>
+
+  <!-- 搜索与过滤 -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索标题或内容..." autocomplete="off">
+    </div>
+    <div class="category-select">
+      <select id="categoryFilter">
+        <option value="全部">📂 全部分类</option>
+        <!-- 动态选项由JS生成 -->
+      </select>
+    </div>
+    <button class="btn-primary" id="openAddModalBtn">
+      <span>+</span> 添加提示词
+    </button>
+  </div>
+
+  <!-- 提示词卡片列表 -->
+  <div id="promptsContainer" class="prompts-grid">
+    <!-- 动态渲染 -->
+  </div>
+</div>
+
+<!-- 添加/编辑模态框 -->
+<div class="modal" id="promptModal">
+  <div class="modal-content">
+    <h2 id="modalTitle">新建提示词</h2>
+    <div class="form-group">
+      <label>标题</label>
+      <input type="text" id="promptTitle" placeholder="例如：专业邮件润色" maxlength="80">
+    </div>
+    <div class="form-group">
+      <label>提示词内容</label>
+      <textarea id="promptContent" placeholder="输入完整的提示词..." rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label>分类</label>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <select id="promptCategorySelect" style="flex:1;">
+          <!-- 动态选项 -->
+        </select>
+        <input type="text" id="newCategoryInput" placeholder="自定义分类" style="flex:1; display: none;" maxlength="20">
+        <button type="button" id="toggleCategoryModeBtn" class="btn-icon" style="white-space: nowrap;">➕ 自定义</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="closeModalBtn">取消</button>
+      <button class="btn-primary" id="savePromptBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- 存储键 ----------
+    const STORAGE_KEY = 'ai_prompt_manager_data';
+
+    // ---------- 预设分类 ----------
+    const DEFAULT_CATEGORIES = ['写作', '编程', '设计', '头脑风暴', '翻译'];
+
+    // ---------- 示例数据 ----------
+    const SAMPLE_PROMPTS = [
+      {
+        id: '1',
+        title: '专业邮件润色',
+        content: '请帮我润色以下邮件，使其更加专业、简洁，同时保持原意：\n[在此粘贴邮件内容]',
+        category: '写作'
+      },
+      {
+        id: '2',
+        title: 'React 组件生成',
+        content: '使用 React 和 TypeScript 创建一个名为 [组件名] 的功能组件，包含完整的 props 类型定义和基础样式。',
+        category: '编程'
+      },
+      {
+        id: '3',
+        title: 'UI 配色建议',
+        content: '作为 UI 设计师，为一个关于 [主题] 的网页应用推荐一套现代配色方案，包括主色、辅色和背景色。',
+        category: '设计'
+      },
+      {
+        id: '4',
+        title: '产品创意生成',
+        content: '基于 [行业/用户痛点] 产生5个创新的产品功能点子，每个附带简短说明。',
+        category: '头脑风暴'
+      },
+      {
+        id: '5',
+        title: '中英互译专家',
+        content: '你是一位精通中英文的翻译专家，请将以下文本翻译成 [目标语言]，保持专业自然的语气。',
+        category: '翻译'
+      }
+    ];
+
+    // ---------- 应用状态 ----------
+    let prompts = [];                 // 当前所有提示词
+    let categories = [...DEFAULT_CATEGORIES];
+    let currentFilter = '全部';      // 分类过滤
+    let searchTerm = '';            // 搜索关键词
+
+    // DOM 元素
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const promptsContainer = document.getElementById('promptsContainer');
+    const statsDisplay = document.getElementById('statsDisplay');
+    const openAddModalBtn = document.getElementById('openAddModalBtn');
+    const promptModal = document.getElementById('promptModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const promptTitleInput = document.getElementById('promptTitle');
+    const promptContentInput = document.getElementById('promptContent');
+    const promptCategorySelect = document.getElementById('promptCategorySelect');
+    const newCategoryInput = document.getElementById('newCategoryInput');
+    const toggleCategoryModeBtn = document.getElementById('toggleCategoryModeBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const savePromptBtn = document.getElementById('savePromptBtn');
+
+    // 当前编辑的提示词ID (null 表示新增)
+    let editingId = null;
+    // 是否处于自定义分类输入模式
+    let isCustomCategoryMode = false;
+
+    // ---------- 工具函数 ----------
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+    }
+
+    // 从 localStorage 加载数据
+    function loadFromStorage() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          if (data.prompts && Array.isArray(data.prompts)) {
+            prompts = data.prompts;
+          } else {
+            prompts = [...SAMPLE_PROMPTS];
+          }
+          if (data.categories && Array.isArray(data.categories)) {
+            // 合并默认分类保证基础分类存在
+            const merged = new Set([...DEFAULT_CATEGORIES, ...data.categories]);
+            categories = Array.from(merged);
+          } else {
+            categories = [...DEFAULT_CATEGORIES];
+          }
+        } catch (e) {
+          console.warn('解析存储失败，使用示例数据');
+          prompts = [...SAMPLE_PROMPTS];
+          categories = [...DEFAULT_CATEGORIES];
+        }
+      } else {
+        // 首次使用：填入示例
+        prompts = [...SAMPLE_PROMPTS];
+        categories = [...DEFAULT_CATEGORIES];
+        persistData();
+      }
+      // 保证所有提示词的分类都在分类列表中（防止遗留）
+      syncCategoriesFromPrompts();
+    }
+
+    // 同步分类：确保所有提示词拥有的分类都存在于分类数组
+    function syncCategoriesFromPrompts() {
+      const existingSet = new Set(categories);
+      let changed = false;
+      prompts.forEach(p => {
+        if (p.category && !existingSet.has(p.category)) {
+          existingSet.add(p.category);
+          changed = true;
+        }
+      });
+      if (changed) {
+        categories = Array.from(existingSet);
+      }
+    }
+
+    // 保存到 localStorage
+    function persistData() {
+      const data = {
+        prompts: prompts,
+        categories: categories.filter(c => c && c.trim() !== '') // 过滤空字符串
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // 更新界面统计
+    function updateStats() {
+      const filtered = getFilteredPrompts();
+      statsDisplay.textContent = `${filtered.length} 条提示词`;
+    }
+
+    // 根据搜索和分类过滤
+    function getFilteredPrompts() {
+      return prompts.filter(p => {
+        // 分类过滤
+        if (currentFilter !== '全部' && p.category !== currentFilter) {
+          return false;
+        }
+        // 搜索过滤 (标题或内容包含关键词)
+        if (searchTerm.trim() !== '') {
+          const term = searchTerm.trim().toLowerCase();
+          const titleMatch = p.title.toLowerCase().includes(term);
+          const contentMatch = p.content.toLowerCase().includes(term);
+          if (!titleMatch && !contentMatch) return false;
+        }
+        return true;
+      });
+    }
+
+    // 刷新分类下拉框 (工具栏和模态框中的分类选择)
+    function populateCategorySelects() {
+      // 更新工具栏分类筛选
+      const filterSelect = categoryFilter;
+      const currentValue = filterSelect.value;
+      filterSelect.innerHTML = '<option value="全部">📂 全部分类</option>';
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        filterSelect.appendChild(option);
+      });
+      // 尝试恢复之前选中的值
+      if (categories.includes(currentValue) || currentValue === '全部') {
+        filterSelect.value = currentValue;
+      } else {
+        filterSelect.value = '全部';
+      }
+
+      // 更新模态框中的分类下拉
+      const modalSelect = promptCategorySelect;
+      if (modalSelect) {
+        modalSelect.innerHTML = '';
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat;
+          option.textContent = cat;
+          modalSelect.appendChild(option);
+        });
+      }
+    }
+
+    // 重置模态框为新增模式
+    function resetModal() {
+      editingId = null;
+      modalTitle.textContent = '新建提示词';
+      promptTitleInput.value = '';
+      promptContentInput.value = '';
+      setCustomCategoryMode(false);
+      // 默认选中第一个分类
+      if (categories.length > 0) {
+        promptCategorySelect.value = categories[0];
+      }
+      newCategoryInput.value = '';
+    }
+
+    // 设置自定义分类模式
+    function setCustomCategoryMode(enabled) {
+      isCustomCategoryMode = enabled;
+      if (enabled) {
+        promptCategorySelect.style.display = 'none';
+        newCategoryInput.style.display = 'block';
+        toggleCategoryModeBtn.textContent = '📋 选择已有';
+        newCategoryInput.focus();
+      } else {
+        promptCategorySelect.style.display = 'block';
+        newCategoryInput.style.display = 'none';
+        toggleCategoryModeBtn.textContent = '➕ 自定义';
+      }
+    }
+
+    // 获取当前选中的分类值 (处理自定义模式)
+    function getSelectedCategory() {
+      if (isCustomCategoryMode) {
+        const customVal = newCategoryInput.value.trim();
+        return customVal || '';
+      } else {
+        return promptCategorySelect.value;
+      }
+    }
+
+    // 打开模态框 (用于新增)
+    function openAddModal() {
+      resetModal();
+      promptModal.classList.add('active');
+    }
+
+    // 关闭模态框
+    function closeModal() {
+      promptModal.classList.remove('active');
+      resetModal();
+    }
+
+    // 保存提示词 (新增或更新)
+    function savePrompt() {
+      const title = promptTitleInput.value.trim();
+      const content = promptContentInput.value.trim();
+      let category = getSelectedCategory();
+
+      if (!title) {
+        alert('请填写标题');
+        return;
+      }
+      if (!content) {
+        alert('请填写提示词内容');
+        return;
+      }
+      if (!category) {
+        alert('请选择或输入一个分类');
+        return;
+      }
+
+      // 格式化分类（首字母大写处理，但保留原意）
+      const formattedCategory = category.trim();
+
+      // 如果是不存在的新分类，添加到分类列表
+      if (!categories.includes(formattedCategory)) {
+        categories.push(formattedCategory);
+        categories.sort(); // 简单排序保持整洁
+      }
+
+      if (editingId) {
+        // 更新现有提示词
+        const index = prompts.findIndex(p => p.id === editingId);
+        if (index !== -1) {
+          prompts[index] = {
+            ...prompts[index],
+            title: title,
+            content: content,
+            category: formattedCategory,
+          };
+        }
+      } else {
+        // 新增提示词
+        const newPrompt = {
+          id: generateId(),
+          title: title,
+          content: content,
+          category: formattedCategory,
+        };
+        prompts.push(newPrompt);
+      }
+
+      // 同步分类（确保覆盖所有）
+      syncCategoriesFromPrompts();
+      persistData();
+      populateCategorySelects();
+      renderPrompts();
+      updateStats();
+      closeModal();
+    }
+
+    // 删除提示词
+    function deletePrompt(id) {
+      if (!confirm('确定要删除这条提示词吗？')) return;
+      prompts = prompts.filter(p => p.id !== id);
+      // 可选：清理不再使用的分类？为了简洁保留分类。
+      syncCategoriesFromPrompts();
+      persistData();
+      populateCategorySelects();
+      renderPrompts();
+      updateStats();
+    }
+
+    // 复制到剪贴板
+    async function copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        // 短暂反馈 (可通过临时样式，这里简单alert或toast，使用轻提示)
+        showTemporaryMessage('✅ 已复制到剪贴板');
+      } catch (err) {
+        alert('复制失败，请手动复制');
+      }
+    }
+
+    // 轻提示（简单实现）
+    function showTemporaryMessage(msg) {
+      const toast = document.createElement('div');
+      toast.textContent = msg;
+      toast.style.position = 'fixed';
+      toast.style.bottom = '2rem';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.background = '#1e293b';
+      toast.style.color = 'white';
+      toast.style.padding = '0.7rem 1.8rem';
+      toast.style.borderRadius = '2rem';
+      toast.style.fontSize = '0.9rem';
+      toast.style.fontWeight = '500';
+      toast.style.zIndex = '999';
+      toast.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 1800);
+    }
+
+    // 渲染提示词卡片
+    function renderPrompts() {
+      const filtered = getFilteredPrompts();
+      if (filtered.length === 0) {
+        promptsContainer.innerHTML = `<div class="empty-state">✨ 暂无提示词，点击“添加提示词”开始收藏</div>`;
+        return;
+      }
+
+      promptsContainer.innerHTML = filtered.map(prompt => {
+        return `
+          <div class="prompt-card" data-id="${prompt.id}">
+            <div class="card-top">
+              <div class="card-title">
+                ${escapeHtml(prompt.title)}
+                <span class="badge">${escapeHtml(prompt.category)}</span>
+              </div>
+            </div>
+            <div class="prompt-content">${escapeHtml(prompt.content)}</div>
+            <div class="card-actions">
+              <button class="btn-icon btn-copy" data-copy="${escapeHtml(prompt.content)}" title="复制内容">
+                📋 复制
+              </button>
+              <button class="btn-icon" data-edit="${prompt.id}" title="编辑">
+                ✏️ 编辑
+              </button>
+              <button class="btn-icon btn-delete" data-delete="${prompt.id}" title="删除">
+                🗑️ 删除
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 绑定事件 (事件委托也可，这里直接绑定)
+      document.querySelectorAll('[data-copy]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const text = btn.getAttribute('data-copy');
+          copyToClipboard(text);
+        });
+      });
+
+      document.querySelectorAll('[data-edit]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute('data-edit');
+          openEditModal(id);
+        });
+      });
+
+      document.querySelectorAll('[data-delete]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.getAttribute('data-delete');
+          deletePrompt(id);
+        });
+      });
+    }
+
+    // 简单的转义防止XSS
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 编辑提示词
+    function openEditModal(id) {
+      const prompt = prompts.find(p => p.id === id);
+      if (!prompt) return;
+      editingId = id;
+      modalTitle.textContent = '编辑提示词';
+      promptTitleInput.value = prompt.title;
+      promptContentInput.value = prompt.content;
+      
+      // 设置分类
+      if (categories.includes(prompt.category)) {
+        setCustomCategoryMode(false);
+        promptCategorySelect.value = prompt.category;
+      } else {
+        // 如果分类不在列表中（极少情况），切换到自定义模式并填入
+        setCustomCategoryMode(true);
+        newCategoryInput.value = prompt.category;
+      }
+      promptModal.classList.add('active');
+    }
+
+    // 事件监听
+    searchInput.addEventListener('input', (e) => {
+      searchTerm = e.target.value;
+      renderPrompts();
+      updateStats();
+    });
+
+    categoryFilter.addEventListener('change', (e) => {
+      currentFilter = e.target.value;
+      renderPrompts();
+      updateStats();
+    });
+
+    openAddModalBtn.addEventListener('click', openAddModal);
+
+    closeModalBtn.addEventListener('click', closeModal);
+    promptModal.addEventListener('click', (e) => {
+      if (e.target === promptModal) closeModal();
+    });
+
+    savePromptBtn.addEventListener('click', savePrompt);
+
+    toggleCategoryModeBtn.addEventListener('click', () => {
+      setCustomCategoryMode(!isCustomCategoryMode);
+    });
+
+    // 键盘支持：ESC关闭模态框
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && promptModal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+
+    // 初始化流程
+    function init() {
+      loadFromStorage();
+      populateCategorySelects();
+      // 设置当前过滤为全部
+      categoryFilter.value = '全部';
+      currentFilter = '全部';
+      searchTerm = '';
+      searchInput.value = '';
+      renderPrompts();
+      updateStats();
+    }
+
+    init();
+  })();
+</script>
+</body>
+</html>
